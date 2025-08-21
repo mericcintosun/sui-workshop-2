@@ -2,7 +2,7 @@ import { useSuiClientQuery } from "@mysten/dapp-kit";
 import { useCurrentAccount } from "@mysten/dapp-kit";
 import { useSignAndExecuteTransaction, useSuiClient } from "@mysten/dapp-kit";
 import { useNetworkVariable } from "./networkConfig";
-import { Card, Text, Heading, Box, Button } from "@radix-ui/themes";
+import { Card, Text, Heading, Box, Button, Flex } from "@radix-ui/themes";
 import { updateNftMetadata } from "./lib/contract";
 //Type
 import { PaginatedObjectsResponse, SuiObjectData } from "@mysten/sui/client";
@@ -45,6 +45,7 @@ function DisplayNft({ refreshKey }: { refreshKey: number }) {
     description: "",
     url: "",
   });
+  const [isUpdating, setIsUpdating] = useState(false);
 
   const { data, isPending, error } = useSuiClientQuery(
     "getOwnedObjects",
@@ -64,6 +65,7 @@ function DisplayNft({ refreshKey }: { refreshKey: number }) {
   );
 
   const handleUpdateNft = (nftObjectId: string) => {
+    setIsUpdating(true);
     const tx = updateNftMetadata(nftObjectId, editForm, packageId);
     
     signAndExecuteTransaction(
@@ -74,6 +76,7 @@ function DisplayNft({ refreshKey }: { refreshKey: number }) {
         onSuccess: async ({ digest }) => {
           setEditingNft(null);
           setEditForm({ name: "", description: "", url: "" });
+          setIsUpdating(false);
           
           const { effects } = await suiClient.waitForTransaction({
             digest,
@@ -87,6 +90,7 @@ function DisplayNft({ refreshKey }: { refreshKey: number }) {
         },
         onError: (error: any) => {
           console.error("Update failed", error);
+          setIsUpdating(false);
         },
       },
     );
@@ -102,129 +106,329 @@ function DisplayNft({ refreshKey }: { refreshKey: number }) {
   };
 
   if (isPending) {
-    return <div>Loading...</div>;
+    return (
+      <Box style={{ textAlign: 'center', padding: '60px 0', width: '100%' }}>
+        <Box style={{
+          width: '40px',
+          height: '40px',
+          border: '2px solid rgba(139, 69, 255, 0.3)',
+          borderTop: '2px solid #8b45ff',
+          borderRadius: '50%',
+          margin: '0 auto 16px',
+          animation: 'spin 1s linear infinite'
+        }} />
+        <Text size="2" style={{ color: 'rgba(255, 255, 255, 0.6)' }}>
+          Loading your NFT collection...
+        </Text>
+      </Box>
+    );
   }
+  
   if (error) {
-    return <div>Error: {error.message}</div>;
+    return (
+      <Box style={{ textAlign: 'center', padding: '60px 0', width: '100%' }}>
+        <Box style={{
+          width: '40px',
+          height: '40px',
+          background: 'rgba(255, 0, 0, 0.1)',
+          borderRadius: '50%',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          margin: '0 auto 16px',
+          fontSize: '20px',
+          border: '1px solid rgba(255, 0, 0, 0.2)'
+        }}>
+          ❌
+        </Box>
+        <Text size="2" style={{ color: 'rgba(255, 255, 255, 0.6)' }}>
+          Error: {error.message}
+        </Text>
+      </Box>
+    );
   }
 
   const nftDataArray = data ? extractNFTData(data) : [];
 
   return (
-    <Box p="4">
+    <Box style={{ width: '100%' }}>
+      <Box style={{ marginBottom: '32px', textAlign: 'center' }}>
+        <Heading size="5" style={{ color: 'white', marginBottom: '8px', fontWeight: '600' }}>
+          My NFT Gallery
+        </Heading>
+        <Text size="2" style={{ color: 'rgba(255, 255, 255, 0.6)' }}>
+          {nftDataArray.length === 0 
+            ? "Start creating your digital art collection" 
+            : `You own ${nftDataArray.length} unique NFT${nftDataArray.length > 1 ? 's' : ''}`
+          }
+        </Text>
+      </Box>
+
       {nftDataArray.length === 0 ? (
-        <Text>No NFTs found</Text>
+        <Box style={{ textAlign: 'center', padding: '60px 0', width: '100%' }}>
+          <Box style={{
+            width: '80px',
+            height: '80px',
+            background: 'rgba(139, 69, 255, 0.1)',
+            borderRadius: '50%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            margin: '0 auto 24px',
+            fontSize: '32px',
+            border: '2px solid rgba(139, 69, 255, 0.2)'
+          }}>
+            🎨
+          </Box>
+          <Heading size="4" style={{ color: 'white', marginBottom: '16px', fontWeight: '600' }}>
+            No NFTs Yet
+          </Heading>
+          <Text size="2" style={{ 
+            color: 'rgba(255, 255, 255, 0.6)', 
+            maxWidth: '400px', 
+            margin: '0 auto',
+            lineHeight: '1.6'
+          }}>
+            Create your first NFT to start building your digital art collection. 
+            Switch to the "Create" tab to get started!
+          </Text>
+        </Box>
       ) : (
-        <Box
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(3, 1fr)",
-            gap: "16px",
-            justifyContent: "center",
-            alignItems: "start",
-          }}
-        >
+        <Box style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+          gap: 'clamp(16px, 3vw, 20px)',
+          justifyContent: 'center',
+          alignItems: 'start',
+          width: '100%'
+        }}>
           {nftDataArray.map((nftData, index) => (
             <Card
               key={index}
               size="3"
               style={{
-                width: "100%",
-                maxWidth: "none",
-                minWidth: "auto",
+                background: 'rgba(0, 0, 0, 0.4)',
+                border: '1px solid rgba(139, 69, 255, 0.1)',
+                borderRadius: '12px',
+                overflow: 'hidden',
+                transition: 'all 0.3s ease',
+                cursor: 'pointer',
+                width: '100%',
+                boxSizing: 'border-box'
               }}
             >
-              <Box p="4">
-                {editingNft === nftData.objectId ? (
-                  // Edit Form
-                  <Box>
+              {editingNft === nftData.objectId ? (
+                // Edit Form
+                <Box p="4" style={{ width: '100%', boxSizing: 'border-box' }}>
+                  <Text size="2" style={{ 
+                    color: 'white', 
+                    marginBottom: '16px', 
+                    display: 'block',
+                    fontWeight: '500'
+                  }}>
+                    Edit NFT
+                  </Text>
+                  
+                  <Box mb="3" style={{ width: '100%' }}>
+                    <Text size="1" style={{ 
+                      color: 'rgba(255, 255, 255, 0.6)', 
+                      marginBottom: '6px', 
+                      display: 'block'
+                    }}>
+                      Name
+                    </Text>
                     <input
                       type="text"
-                      placeholder="Name"
                       value={editForm.name}
                       onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEditForm({ ...editForm, name: e.target.value })}
-                      style={{ 
-                        width: "100%", 
-                        padding: "8px", 
-                        marginBottom: "8px", 
-                        borderRadius: "4px", 
-                        border: "1px solid #ccc" 
+                      style={{
+                        width: '100%',
+                        padding: '8px 12px',
+                        borderRadius: '6px',
+                        border: '1px solid rgba(139, 69, 255, 0.2)',
+                        background: 'rgba(0, 0, 0, 0.3)',
+                        color: 'white',
+                        fontSize: '14px',
+                        outline: 'none',
+                        boxSizing: 'border-box'
                       }}
                     />
+                  </Box>
+                  
+                  <Box mb="3" style={{ width: '100%' }}>
+                    <Text size="1" style={{ 
+                      color: 'rgba(255, 255, 255, 0.6)', 
+                      marginBottom: '6px', 
+                      display: 'block'
+                    }}>
+                      Description
+                    </Text>
                     <input
                       type="text"
-                      placeholder="Description"
                       value={editForm.description}
                       onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEditForm({ ...editForm, description: e.target.value })}
-                      style={{ 
-                        width: "100%", 
-                        padding: "8px", 
-                        marginBottom: "8px", 
-                        borderRadius: "4px", 
-                        border: "1px solid #ccc" 
+                      style={{
+                        width: '100%',
+                        padding: '8px 12px',
+                        borderRadius: '6px',
+                        border: '1px solid rgba(139, 69, 255, 0.2)',
+                        background: 'rgba(0, 0, 0, 0.3)',
+                        color: 'white',
+                        fontSize: '14px',
+                        outline: 'none',
+                        boxSizing: 'border-box'
                       }}
                     />
+                  </Box>
+                  
+                  <Box mb="4" style={{ width: '100%' }}>
+                    <Text size="1" style={{ 
+                      color: 'rgba(255, 255, 255, 0.6)', 
+                      marginBottom: '6px', 
+                      display: 'block'
+                    }}>
+                      Image URL
+                    </Text>
                     <input
-                      type="text"
-                      placeholder="URL"
+                      type="url"
                       value={editForm.url}
                       onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEditForm({ ...editForm, url: e.target.value })}
-                      style={{ 
-                        width: "100%", 
-                        padding: "8px", 
-                        marginBottom: "8px", 
-                        borderRadius: "4px", 
-                        border: "1px solid #ccc" 
+                      style={{
+                        width: '100%',
+                        padding: '8px 12px',
+                        borderRadius: '6px',
+                        border: '1px solid rgba(139, 69, 255, 0.2)',
+                        background: 'rgba(0, 0, 0, 0.3)',
+                        color: 'white',
+                        fontSize: '14px',
+                        outline: 'none',
+                        boxSizing: 'border-box'
                       }}
                     />
-                    <Box style={{ display: "flex", gap: "8px" }}>
-                      <Button 
-                        size="1" 
-                        onClick={() => handleUpdateNft(nftData.objectId)}
-                      >
-                        Save
-                      </Button>
-                      <Button 
-                        size="1" 
-                        variant="soft" 
-                        onClick={() => setEditingNft(null)}
-                      >
-                        Cancel
-                      </Button>
-                    </Box>
                   </Box>
-                ) : (
-                  // Display Mode
-                  <>
-                    <Heading size="6" mb="3">
-                      {nftData.name || "NFT"}
-                    </Heading>
-                    <Text as="p" size="3" color="gray" mb="3">
-                      {nftData.description || "No description available"}
-                    </Text>
-                    {nftData.url && (
+                  
+                  <Flex gap="2" style={{ width: '100%' }}>
+                    <Button 
+                      size="2" 
+                      onClick={() => handleUpdateNft(nftData.objectId)}
+                      disabled={isUpdating}
+                      style={{
+                        flex: '1',
+                        background: isUpdating 
+                          ? 'rgba(139, 69, 255, 0.3)' 
+                          : 'linear-gradient(45deg, #8b45ff, #6b46c1)',
+                        border: 'none',
+                        color: 'white',
+                        fontWeight: '500',
+                        minWidth: '0'
+                      }}
+                    >
+                      {isUpdating ? 'Saving...' : 'Save Changes'}
+                    </Button>
+                    <Button 
+                      size="2" 
+                      variant="soft" 
+                      onClick={() => setEditingNft(null)}
+                      disabled={isUpdating}
+                      style={{
+                        flex: '1',
+                        background: 'rgba(0, 0, 0, 0.3)',
+                        border: '1px solid rgba(139, 69, 255, 0.2)',
+                        color: 'white',
+                        minWidth: '0'
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                  </Flex>
+                </Box>
+              ) : (
+                // Display Mode
+                <>
+                  <Box style={{
+                    position: 'relative',
+                    height: '180px',
+                    background: 'linear-gradient(45deg, #1a1a2e, #16213e)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: '100%'
+                  }}>
+                    {nftData.url ? (
                       <img
                         src={nftData.url}
-                        alt="NFT"
+                        alt={nftData.name}
                         style={{
-                          width: "100%",
-                          height: "auto",
-                          borderRadius: "8px",
-                          objectFit: "cover",
+                          width: '100%',
+                          height: '100%',
+                          objectFit: 'cover'
+                        }}
+                        onError={(e) => {
+                          e.currentTarget.style.display = 'none';
                         }}
                       />
+                    ) : (
+                      <Text size="3" style={{ color: 'rgba(255, 255, 255, 0.4)' }}>
+                        No Image
+                      </Text>
                     )}
+                    
                     <Button 
                       size="1" 
                       variant="soft" 
                       onClick={() => startEditing(nftData)}
-                      style={{ marginTop: "8px" }}
+                      style={{
+                        position: 'absolute',
+                        top: '8px',
+                        right: '8px',
+                        background: 'rgba(0, 0, 0, 0.7)',
+                        border: '1px solid rgba(139, 69, 255, 0.3)',
+                        color: 'white',
+                        borderRadius: '6px',
+                        padding: '4px 8px',
+                        fontSize: '11px',
+                        fontWeight: '500'
+                      }}
                     >
-                      Edit NFT
+                      Edit
                     </Button>
-                  </>
-                )}
-              </Box>
+                  </Box>
+                  
+                  <Box p="4" style={{ width: '100%', boxSizing: 'border-box' }}>
+                    <Heading size="3" style={{ 
+                      color: 'white', 
+                      marginBottom: '8px',
+                      fontWeight: '600'
+                    }}>
+                      {nftData.name || "Untitled NFT"}
+                    </Heading>
+                    <Text size="1" style={{ 
+                      color: 'rgba(255, 255, 255, 0.6)', 
+                      marginBottom: '12px',
+                      lineHeight: '1.4'
+                    }}>
+                      {nftData.description || "No description available"}
+                    </Text>
+                    
+                    <Box style={{
+                      background: 'rgba(0, 0, 0, 0.3)',
+                      borderRadius: '6px',
+                      padding: '6px 10px',
+                      border: '1px solid rgba(139, 69, 255, 0.1)',
+                      width: '100%',
+                      boxSizing: 'border-box'
+                    }}>
+                      <Text size="1" style={{ 
+                        color: 'rgba(255, 255, 255, 0.5)',
+                        fontFamily: 'monospace',
+                        wordBreak: 'break-all'
+                      }}>
+                        ID: {nftData.objectId.slice(0, 8)}...{nftData.objectId.slice(-8)}
+                      </Text>
+                    </Box>
+                  </Box>
+                </>
+              )}
             </Card>
           ))}
         </Box>
